@@ -1,0 +1,17 @@
+:root{--bg:#f4f1ec;--pn:#fffdf9;--ink:#2a2724;--mut:#7b756d;--ln:#e2dcd2;--acc:#d9573b;--cv:#e6e1d6}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1a18;--pn:#26231f;--ink:#efe9df;--mut:#9a9387;--ln:#3a352f;--cv:#14120f}}
+*{box-sizing:border-box}html,body,#root{height:100%;margin:0}
+#root{background:var(--bg);color:var(--ink);font:14px/1.4 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;display:flex;flex-direction:column}
+.bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:8px 12px;background:var(--pn);border-bottom:1px solid var(--ln)}
+.g{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.mut{color:var(--mut)}
+h1{font:700 17px Georgia,"Songti SC",serif;margin:0 8px 0 0}h1 b{color:var(--acc)}
+button,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--ln);border-radius:7px;padding:5px 10px;cursor:pointer}
+button:hover{border-color:var(--acc)}button.on{background:var(--acc);border-color:var(--acc);color:#fff}button.p{background:var(--ink);color:var(--pn);border-color:var(--ink)}
+label{color:var(--mut);display:flex;align-items:center;gap:5px;font-size:13px}
+input[type=color]{width:28px;height:26px;padding:0;border:1px solid var(--ln);border-radius:6px;background:none}
+input[type=range]{width:90px;accent-color:var(--acc)}
+textarea{font:inherit;width:190px;height:30px;resize:vertical;background:var(--bg);color:var(--ink);border:1px solid var(--ln);border-radius:7px;padding:4px 8px}
+#w{flex:1;min-height:0;position:relative}#cv{position:absolute;inset:0;touch-action:none}
+#em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;color:var(--mut);text-align:center;font-size:16px}
+#hint{padding:5px 12px;color:var(--mut);font-size:12px;background:var(--pn);border-top:1px solid var(--ln)}
+#tt{position:fixed;left:50%;bottom:50px;transform:translateX(-50%);background:var(--ink);color:var(--pn);padding:7px 14px;border-radius:20px;pointer-events:none;transition:.25s}
