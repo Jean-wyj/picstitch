@@ -42,7 +42,7 @@ textarea{font:inherit;width:190px;height:30px;resize:vertical;background:var(--b
 <div id="tt"></div>
 <script>
 const $=s=>document.querySelector(s),cv=$('#cv'),ctx=cv.getContext('2d'),tc=document.createElement('canvas').getContext('2d');
-let items=[],sel=-1,tool='select',V={z:1,ox:0,oy:0},bg='#ffffff',gap=8,layout='',drag=null,col='#ef4444',lw=6,fs=48,fill='',fi=0,hist=[];
+let items=[],sel=-1,tool='select',V={z:1,ox:0,oy:0},bg='#ffffff',gap=8,layout='',drag=null,col='#ef4444',lw=6,fs=48,fill='',fnt=0,hist=[];
 const FONTS=[['黑体',"'PingFang SC','Microsoft YaHei','Heiti SC',sans-serif"],['宋体',"SimSun,'Songti SC',STSong,serif"],['楷体',"KaiTi,'楷体','Kaiti SC',STKaiti,BiauKai,serif"],['仿宋',"FangSong,'FangSong SC',STFangsong,serif"],['行楷',"'Xingkai SC',STXingkai,'Kaiti SC',KaiTi,cursive"],['Georgia',"Georgia,serif"],['等宽',"'Courier New',monospace"]];
 function save(){hist.push(items.map(i=>({...i})));if(hist.length>60)hist.shift()}
 function undo(){const h=hist.pop();if(!h)return toast('没有可撤销的操作');items=h;sel=-1;ui();render()}
@@ -82,7 +82,7 @@ function snap(it,x,y){const t=7/V.z;let bx=t,by=t,rx=x,ry=y;items.forEach(o=>{if
 function setTool(t){tool=t;['select','shape','text'].forEach(k=>$('#t-'+k).classList.toggle('on',k==t));cv.style.cursor=t=='select'?'default':'crosshair'}
 cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId);const p=pt(e);
  if(tool=='shape'){save();const k=$('#shp').value,ln=k=='line'||k=='arrow';items.push({t:'shape',k,x:p.x,y:p.y,w:0,h:0,fx:0,fy:0,color:col,lw:ln?Math.max(lw,2):lw,fill:ln?'':fill});sel=items.length-1;drag={m:'draw',p0:p,o:{}};return}
- if(tool=='text'){save();items.push({t:'text',x:p.x,y:p.y,text:'在这里输入文字',size:fs,color:col,fi,b:$('#bd').checked});sel=items.length-1;setTool('select');ui();render();$('#txt').focus();$('#txt').select();return}
+ if(tool=='text'){save();items.push({t:'text',x:p.x,y:p.y,text:'在这里输入文字',size:fs,color:col,fi:fnt,b:$('#bd').checked});sel=items.length-1;setTool('select');ui();render();$('#txt').focus();$('#txt').select();return}
  if(sel>=0&&items[sel]){const k=hitH(p);if(k){save();drag={m:k.length==2?'rs':'crop',k,p0:p,o:{...items[sel]}};return}}
  const i=hit(p);
  if(i>=0){sel=i;save();drag={m:'move',p0:p,o:{...items[i]}}}else{sel=-1;drag={m:'pan',s:{x:e.clientX,y:e.clientY},o:{...V}}}
@@ -125,7 +125,7 @@ $('#txt').oninput=e=>{if(items[sel]){items[sel].text=e.target.value||' ';render(
 function setFill(){const it=items[sel];if(it&&it.t=='shape'){it.fill=$('#fc').checked?$('#fcol').value:'';fill=it.fill;render()}}
 $('#fc').onchange=setFill;$('#fcol').oninput=()=>{$('#fc').checked=true;setFill()};
 $('#fam').innerHTML=FONTS.map((f,i)=>`<option value="${i}">${f[0]}</option>`).join('');
-$('#fam').onchange=e=>{const it=items[sel];fi=+e.target.value;if(it&&it.t=='text'){it.fi=fi;render()}};
+$('#fam').onchange=e=>{const it=items[sel];fnt=+e.target.value;if(it&&it.t=='text'){it.fi=fnt;render()}};
 $('#bd').onchange=e=>{const it=items[sel];if(it&&it.t=='text'){it.b=e.target.checked;render()}};
 function del(){if(sel<0)return;save();items.splice(sel,1);sel=-1;ui();render()}
 function layer(d){const j=sel+d;if(sel<0||j<0||j>=items.length)return;save();[items[sel],items[j]]=[items[j],items[sel]];sel=j;render()}
