@@ -23,32 +23,49 @@ textarea{font:inherit;width:190px;height:30px;resize:vertical;background:var(--b
 <div class="bar">
  <h1>拼图<b>工坊</b></h1>
  <div class="g"><button class="p" onclick="fi.click()">＋ 添加图片</button><input id="fi" type="file" accept="image/*" multiple hidden></div>
- <div class="g"><span style="color:var(--mut)">拼接</span><button onclick="arrange('h')">横拼</button><button onclick="arrange('v')">竖拼</button><button onclick="arrange('g')">田字/网格</button><button onclick="fitView();render()">适应窗口</button></div>
+ <div class="g"><span style="color:var(--mut)">拼接</span><button onclick="arrange('h')">横拼</button><button onclick="arrange('v')">竖拼</button><button onclick="fitView();render()">适应窗口</button><button onclick="undo()">↶ 撤销</button><button onclick="clearAll()">清空</button></div>
  <div class="g"><label>间距<input id="gp" type="range" min="0" max="60" value="8"></label><label>底色<input id="bgc" type="color" value="#ffffff"></label></div>
- <div class="g"><span style="color:var(--mut)">工具</span><button id="t-select" class="on" onclick="setTool('select')">选择</button><button id="t-rect" onclick="setTool('rect')">▢ 方框</button><button id="t-text" onclick="setTool('text')">T 文字</button></div>
+ <div class="g"><span style="color:var(--mut)">工具</span><button id="t-select" class="on" onclick="setTool('select')">选择</button><button id="t-shape" onclick="setTool('shape')">▢ 图形</button><select id="shp" onchange="setTool('shape')"><option value="rect">方框</option><option value="round">圆角框</option><option value="ellipse">椭圆</option><option value="tri">三角形</option><option value="star">星形</option><option value="line">直线</option><option value="arrow">箭头</option></select><button id="t-text" onclick="setTool('text')">T 文字</button></div>
  <div class="g" style="margin-left:auto"><select id="qs"><option value="auto">原图清晰度</option><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option></select><select id="fm"><option value="image/png">PNG</option><option value="image/jpeg">JPG</option></select><button onclick="copyImg()">复制</button><button class="p" onclick="download()">下载</button></div>
 </div>
 <div class="bar" id="props">
  <span style="color:var(--mut)" id="pl">未选中对象</span>
  <label id="pc" class="hide">颜色<input id="col" type="color" value="#ef4444"></label>
  <label id="ps" class="hide"><span id="psl">线宽</span><input id="sz" type="range" min="1" max="30" value="6"></label>
+ <label id="pf" class="hide">填充<input id="fc" type="checkbox"><input id="fcol" type="color" value="#fde047"></label>
+ <select id="fam" class="hide"></select><label id="pbd" class="hide"><input id="bd" type="checkbox" checked>粗体</label>
  <textarea id="txt" class="hide" placeholder="输入文字"></textarea>
  <div class="g" id="pb" class="hide"><button onclick="layer(1)">上移一层</button><button onclick="layer(-1)">下移一层</button><button id="rc" onclick="resetCrop()">重置裁剪</button><button onclick="del()">删除</button></div>
 </div>
 <div id="w"><canvas id="cv"></canvas><div id="em">拖入 / 粘贴 / 点击「添加图片」<br>然后选择横拼、竖拼、田字，或直接拖动自由摆放</div></div>
-<div id="hint">拖动图片自由摆放（靠近边缘自动吸附）· 四角缩放 · 四边中点裁剪 · 滚轮缩放画布 · 空白处拖动平移 · Delete 删除</div>
+<div id="hint">拖动图片自由摆放（靠近边缘自动吸附）· 四角缩放 · 四边中点裁剪 · 滚轮缩放画布 · 空白处拖动平移 · Delete 删除 · Ctrl/Cmd+Z 撤销</div>
 <div id="tt"></div>
 <script>
 const $=s=>document.querySelector(s),cv=$('#cv'),ctx=cv.getContext('2d'),tc=document.createElement('canvas').getContext('2d');
-let items=[],sel=-1,tool='select',V={z:1,ox:0,oy:0},bg='#ffffff',gap=8,layout='',drag=null,col='#ef4444',lw=6,fs=48;
+let items=[],sel=-1,tool='select',V={z:1,ox:0,oy:0},bg='#ffffff',gap=8,layout='',drag=null,col='#ef4444',lw=6,fs=48,fill='',fi=0,hist=[];
+const FONTS=[['黑体',"'PingFang SC','Microsoft YaHei','Heiti SC',sans-serif"],['宋体',"SimSun,'Songti SC',STSong,serif"],['楷体',"KaiTi,'楷体','Kaiti SC',STKaiti,BiauKai,serif"],['仿宋',"FangSong,'FangSong SC',STFangsong,serif"],['行楷',"'Xingkai SC',STXingkai,'Kaiti SC',KaiTi,cursive"],['Georgia',"Georgia,serif"],['等宽',"'Courier New',monospace"]];
+function save(){hist.push(items.map(i=>({...i})));if(hist.length>60)hist.shift()}
+function undo(){const h=hist.pop();if(!h)return toast('没有可撤销的操作');items=h;sel=-1;ui();render()}
+function clearAll(){if(!items.length)return;save();items=[];sel=-1;layout='';ui();render();toast('已清空，Ctrl+Z 可撤销')}
 function toast(m){const t=$('#tt');t.textContent=m;t.style.opacity=1;clearTimeout(t.h);t.h=setTimeout(()=>t.style.opacity=0,2200)}
 function size(){const r=$('#w').getBoundingClientRect(),d=devicePixelRatio||1;cv.width=r.width*d;cv.height=r.height*d;cv.style.width=r.width+'px';cv.style.height=r.height+'px';render()}
-function box(it){if(it.t=='text'){tc.font=`bold ${it.size}px sans-serif`;const L=it.text.split('\n');it.w=Math.max(10,...L.map(l=>tc.measureText(l).width));it.h=L.length*it.size*1.25}return it}
+function F(it){return `${it.b?'bold ':''}${it.size}px ${FONTS[it.fi||0][1]}`}
+function box(it){if(it.t=='text'){tc.font=F(it);const L=it.text.split('\n');it.w=Math.max(10,...L.map(l=>tc.measureText(l).width));it.h=L.length*it.size*1.25}return it}
 function bounds(){if(!items.length)return null;let a=1e9,b=1e9,c=-1e9,d=-1e9;items.forEach(i=>{box(i);a=Math.min(a,i.x);b=Math.min(b,i.y);c=Math.max(c,i.x+i.w);d=Math.max(d,i.y+i.h)});return{x:a,y:b,w:c-a,h:d-b}}
 function drawItem(c,it){
  if(it.t=='img')c.drawImage(it.im,it.cx,it.cy,it.cw,it.ch,it.x,it.y,it.w,it.h);
- else if(it.t=='rect'){c.strokeStyle=it.color;c.lineWidth=it.lw;c.strokeRect(it.x,it.y,it.w,it.h)}
- else{c.fillStyle=it.color;c.font=`bold ${it.size}px sans-serif`;c.textBaseline='top';it.text.split('\n').forEach((l,i)=>c.fillText(l,it.x,it.y+i*it.size*1.25))}}
+ else if(it.t=='shape')drawShape(c,it);
+ else{c.fillStyle=it.color;c.font=F(it);c.textBaseline='top';it.text.split('\n').forEach((l,i)=>c.fillText(l,it.x,it.y+i*it.size*1.25))}}
+function ends(it){const{x,y,w,h}=it;return[it.fx?x+w:x,it.fy?y+h:y,it.fx?x:x+w,it.fy?y:y+h]}
+function drawShape(c,it){const{x,y,w,h,k}=it;c.lineWidth=it.lw;c.strokeStyle=it.color;c.lineJoin=c.lineCap='round';c.beginPath();
+ if(k=='rect')c.rect(x,y,w,h);
+ else if(k=='round')c.roundRect(x,y,w,h,Math.min(w,h)*.2);
+ else if(k=='ellipse')c.ellipse(x+w/2,y+h/2,w/2,h/2,0,0,7);
+ else if(k=='tri'){c.moveTo(x+w/2,y);c.lineTo(x+w,y+h);c.lineTo(x,y+h);c.closePath()}
+ else if(k=='star'){for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?.4:1;c[i?'lineTo':'moveTo'](x+w/2+Math.cos(a)*r*w/2,y+h/2+Math.sin(a)*r*h/2)}c.closePath()}
+ else{const[a,b,e,f]=ends(it);c.moveTo(a,b);c.lineTo(e,f);if(k=='arrow'){const t=Math.atan2(f-b,e-a),L=Math.max(it.lw*4,16);[.45,-.45].forEach(d=>{c.moveTo(e,f);c.lineTo(e-L*Math.cos(t-d),f-L*Math.sin(t-d))})}}
+ if(it.fill&&k!='line'&&k!='arrow'){c.fillStyle=it.fill;c.fill()}
+ if(it.lw>0)c.stroke()}
 function H(it){const{x,y,w,h}=it,a=[['nw',x,y],['ne',x+w,y],['sw',x,y+h],['se',x+w,y+h]];if(it.t=='img')a.push(['n',x+w/2,y],['s',x+w/2,y+h],['w',x,y+h/2],['e',x+w,y+h/2]);return a}
 function render(){
  const d=devicePixelRatio||1;ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--cv').trim();ctx.fillRect(0,0,cv.width,cv.height);
@@ -60,19 +77,19 @@ function render(){
 function fitView(){const B=bounds();if(!B)return;const r=$('#w').getBoundingClientRect();V.z=Math.min((r.width-60)/B.w,(r.height-60)/B.h,2);V.ox=(r.width-B.w*V.z)/2-B.x*V.z;V.oy=(r.height-B.h*V.z)/2-B.y*V.z}
 function pt(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left-V.ox)/V.z,y:(e.clientY-r.top-V.oy)/V.z}}
 function hitH(p){const r=10/V.z,it=box(items[sel]);return(H(it).find(a=>Math.abs(p.x-a[1])<r&&Math.abs(p.y-a[2])<r)||[])[0]}
-function hit(p){for(let i=items.length-1;i>=0;i--){const it=box(items[i]);if(p.x<it.x||p.y<it.y||p.x>it.x+it.w||p.y>it.y+it.h)continue;if(it.t=='rect'){const m=it.lw+8/V.z;if(p.x>it.x+m&&p.y>it.y+m&&p.x<it.x+it.w-m&&p.y<it.y+it.h-m)continue}return i}return -1}
+function hit(p){for(let i=items.length-1;i>=0;i--){const it=box(items[i]),e=it.t=='shape'?it.lw/2+6/V.z:0;if(p.x<it.x-e||p.y<it.y-e||p.x>it.x+it.w+e||p.y>it.y+it.h+e)continue;if(it.t=='shape'){const m=it.lw+8/V.z;if(it.k=='line'||it.k=='arrow'){const[a,b,c,d]=ends(it),dx=c-a,dy=d-b,t=Math.max(0,Math.min(1,((p.x-a)*dx+(p.y-b)*dy)/(dx*dx+dy*dy||1)));if(Math.hypot(p.x-a-t*dx,p.y-b-t*dy)>m)continue}else if(!it.fill&&p.x>it.x+m&&p.y>it.y+m&&p.x<it.x+it.w-m&&p.y<it.y+it.h-m)continue}return i}return -1}
 function snap(it,x,y){const t=7/V.z;let bx=t,by=t,rx=x,ry=y;items.forEach(o=>{if(o==it)return;[o.x,o.x+o.w].forEach(v=>[[x,0],[x+it.w,-it.w]].forEach(([c,f])=>{const q=Math.abs(c-v);if(q<bx){bx=q;rx=v+f}}));[o.y,o.y+o.h].forEach(v=>[[y,0],[y+it.h,-it.h]].forEach(([c,f])=>{const q=Math.abs(c-v);if(q<by){by=q;ry=v+f}}))});return[rx,ry]}
-function setTool(t){tool=t;['select','rect','text'].forEach(k=>$('#t-'+k).classList.toggle('on',k==t));cv.style.cursor=t=='select'?'default':'crosshair'}
+function setTool(t){tool=t;['select','shape','text'].forEach(k=>$('#t-'+k).classList.toggle('on',k==t));cv.style.cursor=t=='select'?'default':'crosshair'}
 cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId);const p=pt(e);
- if(tool=='rect'){items.push({t:'rect',x:p.x,y:p.y,w:0,h:0,color:col,lw:lw});sel=items.length-1;drag={m:'draw',p0:p,o:{}};return}
- if(tool=='text'){items.push({t:'text',x:p.x,y:p.y,text:'在这里输入文字',size:fs,color:col});sel=items.length-1;setTool('select');ui();render();$('#txt').focus();$('#txt').select();return}
- if(sel>=0&&items[sel]){const k=hitH(p);if(k){drag={m:k.length==2?'rs':'crop',k,p0:p,o:{...items[sel]}};return}}
+ if(tool=='shape'){save();const k=$('#shp').value,ln=k=='line'||k=='arrow';items.push({t:'shape',k,x:p.x,y:p.y,w:0,h:0,fx:0,fy:0,color:col,lw:ln?Math.max(lw,2):lw,fill:ln?'':fill});sel=items.length-1;drag={m:'draw',p0:p,o:{}};return}
+ if(tool=='text'){save();items.push({t:'text',x:p.x,y:p.y,text:'在这里输入文字',size:fs,color:col,fi,b:$('#bd').checked});sel=items.length-1;setTool('select');ui();render();$('#txt').focus();$('#txt').select();return}
+ if(sel>=0&&items[sel]){const k=hitH(p);if(k){save();drag={m:k.length==2?'rs':'crop',k,p0:p,o:{...items[sel]}};return}}
  const i=hit(p);
- if(i>=0){sel=i;drag={m:'move',p0:p,o:{...items[i]}}}else{sel=-1;drag={m:'pan',s:{x:e.clientX,y:e.clientY},o:{...V}}}
+ if(i>=0){sel=i;save();drag={m:'move',p0:p,o:{...items[i]}}}else{sel=-1;drag={m:'pan',s:{x:e.clientX,y:e.clientY},o:{...V}}}
  ui();render()};
 cv.onpointermove=e=>{if(!drag)return;const p=pt(e),it=items[sel],o=drag.o,k=drag.k;
  if(drag.m=='pan'){V.ox=o.ox+e.clientX-drag.s.x;V.oy=o.oy+e.clientY-drag.s.y}
- else if(drag.m=='draw'){it.x=Math.min(p.x,drag.p0.x);it.y=Math.min(p.y,drag.p0.y);it.w=Math.abs(p.x-drag.p0.x);it.h=Math.abs(p.y-drag.p0.y)}
+ else if(drag.m=='draw'){it.x=Math.min(p.x,drag.p0.x);it.y=Math.min(p.y,drag.p0.y);it.w=Math.abs(p.x-drag.p0.x);it.h=Math.abs(p.y-drag.p0.y);it.fx=p.x<drag.p0.x?1:0;it.fy=p.y<drag.p0.y?1:0}
  else if(drag.m=='move'){const[x,y]=snap(it,o.x+p.x-drag.p0.x,o.y+p.y-drag.p0.y);it.x=x;it.y=y}
  else if(drag.m=='rs'){const ax=k.includes('w')?o.x+o.w:o.x,ay=k.includes('n')?o.y+o.h:o.y;
   if(it.t=='text'){it.size=Math.max(8,o.size*Math.max(.1,(k.includes('w')?ax-p.x:p.x-ax)/o.w));box(it);it.x=k.includes('w')?ax-it.w:ax;it.y=k.includes('n')?ay-it.h:ay}
@@ -83,32 +100,37 @@ cv.onpointermove=e=>{if(!drag)return;const p=pt(e),it=items[sel],o=drag.o,k=drag
   if(k=='n'){dy=cl(dy,-o.cy/sy,o.h-10);it.y=o.y+dy;it.h=o.h-dy;it.cy=o.cy+dy*sy;it.ch=o.ch-dy*sy}
   if(k=='s'){dy=cl(dy,10-o.h,(Hh-o.cy-o.ch)/sy);it.h=o.h+dy;it.ch=o.ch+dy*sy}}
  render()};
-cv.onpointerup=()=>{if(drag&&drag.m=='draw'){const it=items[sel];if(it.w<4||it.h<4){items.pop();sel=-1}}drag=null;ui();render()};
+cv.onpointerup=()=>{if(drag&&drag.m=='draw'){const it=items[sel];if(it.k=='line'||it.k=='arrow'?it.w+it.h<6:it.w<4||it.h<4){items.pop();hist.pop();sel=-1}}drag=null;ui();render()};
 cv.addEventListener('wheel',e=>{e.preventDefault();const p=pt(e),r=cv.getBoundingClientRect();V.z=Math.min(8,Math.max(.03,V.z*(e.deltaY<0?1.1:1/1.1)));V.ox=e.clientX-r.left-p.x*V.z;V.oy=e.clientY-r.top-p.y*V.z;render()},{passive:false});
-function arrange(m){layout=m;const L=items.filter(i=>i.t=='img');if(!L.length)return toast('请先添加图片');const g=+gap;
+function arrange(m){layout=m;const L=items.filter(i=>i.t=='img');if(!L.length)return toast('请先添加图片');save();const g=+gap;
  if(m=='h'){let x=0;L.forEach(i=>{i.h=600;i.w=i.cw*600/i.ch;i.x=x;i.y=0;x+=i.w+g})}
  if(m=='v'){let y=0;L.forEach(i=>{i.w=800;i.h=i.ch*800/i.cw;i.x=0;i.y=y;y+=i.h+g})}
  if(m=='g'){const c=L.length<=4?2:Math.ceil(Math.sqrt(L.length)),S=600;L.forEach((i,k)=>{const s=Math.min(S/i.cw,S/i.ch);i.w=i.cw*s;i.h=i.ch*s;i.x=(k%c)*(S+g)+(S-i.w)/2;i.y=Math.floor(k/c)*(S+g)+(S-i.h)/2})}
  fitView();render()}
 async function addFiles(fs){const L=[...fs].filter(f=>f.type.startsWith('image/'));if(!L.length)return;
  const ims=await Promise.all(L.map(f=>new Promise(r=>{const im=new Image();im.onload=()=>r(im);im.src=URL.createObjectURL(f)})));
- ims.forEach(im=>{const B=bounds(),h=500;items.push({t:'img',im,x:B?B.x+B.w+gap:0,y:B?B.y:0,w:im.naturalWidth*h/im.naturalHeight,h,cx:0,cy:0,cw:im.naturalWidth,ch:im.naturalHeight})});
+ save();ims.forEach(im=>{const B=bounds(),h=500;items.push({t:'img',im,x:B?B.x+B.w+gap:0,y:B?B.y:0,w:im.naturalWidth*h/im.naturalHeight,h,cx:0,cy:0,cw:im.naturalWidth,ch:im.naturalHeight})});
  sel=items.length-1;if(layout)arrange(layout);else{fitView();render()}ui()}
 $('#fi').onchange=e=>{addFiles(e.target.files);e.target.value=''};
 document.onpaste=e=>addFiles(e.clipboardData.files);
 $('#w').ondragover=e=>e.preventDefault();$('#w').ondrop=e=>{e.preventDefault();addFiles(e.dataTransfer.files)};
 $('#gp').oninput=e=>{gap=+e.target.value;if(layout)arrange(layout)};
 $('#bgc').oninput=e=>{bg=e.target.value;render()};
-function ui(){const it=items[sel],T=it?it.t:'';$('#pl').textContent=it?{img:'图片',rect:'方框',text:'文字'}[T]:'未选中对象';
- $('#pc').classList.toggle('hide',!it||T=='img');$('#ps').classList.toggle('hide',!it||T=='img');$('#txt').classList.toggle('hide',T!='text');$('#pb').classList.toggle('hide',!it);$('#rc').classList.toggle('hide',T!='img');
- if(it&&T!='img'){$('#col').value=it.color;$('#psl').textContent=T=='rect'?'线宽':'字号';const s=$('#sz');s.max=T=='rect'?40:240;s.value=T=='rect'?it.lw:it.size;if(T=='text')$('#txt').value=it.text}}
+function ui(){const it=items[sel],T=it?it.t:'';$('#pl').textContent=it?{img:'图片',shape:'图形',text:'文字'}[T]:'未选中对象';
+ $('#pc').classList.toggle('hide',!it||T=='img');$('#ps').classList.toggle('hide',!it||T=='img');$('#txt').classList.toggle('hide',T!='text');$('#pf').classList.toggle('hide',T!='shape'||it.k=='line'||it.k=='arrow');$('#fam').classList.toggle('hide',T!='text');$('#pbd').classList.toggle('hide',T!='text');$('#pb').classList.toggle('hide',!it);$('#rc').classList.toggle('hide',T!='img');
+ if(it&&T!='img'){$('#col').value=it.color;$('#psl').textContent=T=='shape'?'线宽':'字号';const s=$('#sz');s.max=T=='shape'?40:240;s.min=T=='shape'&&it.k!='line'&&it.k!='arrow'?0:1;s.value=T=='shape'?it.lw:it.size;if(T=='shape'){$('#fc').checked=!!it.fill;if(it.fill)$('#fcol').value=it.fill}if(T=='text'){$('#txt').value=it.text;$('#fam').value=it.fi||0;$('#bd').checked=!!it.b}}}
 $('#col').oninput=e=>{col=e.target.value;if(items[sel])items[sel].color=col;render()};
-$('#sz').oninput=e=>{const v=+e.target.value,it=items[sel];if(!it)return;if(it.t=='rect'){it.lw=lw=v}else{it.size=fs=v}render()};
+$('#sz').oninput=e=>{const v=+e.target.value,it=items[sel];if(!it)return;if(it.t=='shape'){it.lw=lw=v}else{it.size=fs=v}render()};
 $('#txt').oninput=e=>{if(items[sel]){items[sel].text=e.target.value||' ';render()}};
-function del(){if(sel<0)return;items.splice(sel,1);sel=-1;ui();render()}
-function layer(d){const j=sel+d;if(sel<0||j<0||j>=items.length)return;[items[sel],items[j]]=[items[j],items[sel]];sel=j;render()}
-function resetCrop(){const it=items[sel];if(!it||it.t!='img')return;const s=it.w/it.cw;it.cx=0;it.cy=0;it.cw=it.im.naturalWidth;it.ch=it.im.naturalHeight;it.w=it.cw*s;it.h=it.ch*s;render()}
-document.onkeydown=e=>{if(['TEXTAREA','INPUT'].includes(document.activeElement.tagName))return;if(e.key=='Delete'||e.key=='Backspace'){e.preventDefault();del()}};
+function setFill(){const it=items[sel];if(it&&it.t=='shape'){it.fill=$('#fc').checked?$('#fcol').value:'';fill=it.fill;render()}}
+$('#fc').onchange=setFill;$('#fcol').oninput=()=>{$('#fc').checked=true;setFill()};
+$('#fam').innerHTML=FONTS.map((f,i)=>`<option value="${i}">${f[0]}</option>`).join('');
+$('#fam').onchange=e=>{const it=items[sel];fi=+e.target.value;if(it&&it.t=='text'){it.fi=fi;render()}};
+$('#bd').onchange=e=>{const it=items[sel];if(it&&it.t=='text'){it.b=e.target.checked;render()}};
+function del(){if(sel<0)return;save();items.splice(sel,1);sel=-1;ui();render()}
+function layer(d){const j=sel+d;if(sel<0||j<0||j>=items.length)return;save();[items[sel],items[j]]=[items[j],items[sel]];sel=j;render()}
+function resetCrop(){const it=items[sel];if(!it||it.t!='img')return;save();const s=it.w/it.cw;it.cx=0;it.cy=0;it.cw=it.im.naturalWidth;it.ch=it.im.naturalHeight;it.w=it.cw*s;it.h=it.ch*s;render()}
+document.onkeydown=e=>{const a=document.activeElement.tagName;if(a=='TEXTAREA')return;if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()=='z'){e.preventDefault();undo();return}if(a=='INPUT'||a=='SELECT')return;if(e.key=='Delete'||e.key=='Backspace'){e.preventDefault();del()}};
 function out(){const B=bounds();if(!B){toast('请先添加图片');return null}let m=1;items.forEach(i=>{if(i.t=='img')m=Math.max(m,i.cw/i.w)});
  let s=$('#qs').value=='auto'?m:+$('#qs').value;s=Math.min(s,8192/Math.max(B.w,B.h));
  const c=document.createElement('canvas');c.width=Math.round(B.w*s);c.height=Math.round(B.h*s);const x=c.getContext('2d');x.imageSmoothingQuality='high';x.fillStyle=bg;x.fillRect(0,0,c.width,c.height);x.scale(s,s);x.translate(-B.x,-B.y);items.forEach(i=>drawItem(x,i));return c}
