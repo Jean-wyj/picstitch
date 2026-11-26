@@ -1,10 +1,15 @@
 <!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>拼图工坊 · PicStitch</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xiao-xue-seng/ar-pl-ukai@2.0.0/cn/result.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.7.0/lxgwwenkaiscreen.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5/400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5/700.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-sc@5/400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-sc@5/700.css">
 <style>
+@font-face{font-family:'KaiPunct';src:url(https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.7.0/files/lxgwwenkaiscreen-subset-119.woff2) format('woff2');unicode-range:U+3001,U+3002,U+FF0C,U+FF1A}
+@font-face{font-family:'KaiPunct';src:url(https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.7.0/files/lxgwwenkaiscreen-subset-115.woff2) format('woff2');unicode-range:U+FF1B}
+@font-face{font-family:'KaiPunct';src:url(https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.7.0/files/lxgwwenkaiscreen-subset-117.woff2) format('woff2');unicode-range:U+FF1F}
+@font-face{font-family:'KaiPunct';src:url(https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.7.0/files/lxgwwenkaiscreen-subset-118.woff2) format('woff2');unicode-range:U+FF01}
 :root{--bg:#f4f1ec;--pn:#fffdf9;--ink:#2a2724;--mut:#7b756d;--ln:#e2dcd2;--acc:#d9573b;--cv:#e6e1d6;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1a18;--pn:#26231f;--ink:#efe9df;--mut:#9a9387;--ln:#3a352f;--cv:#14120f}}
 :root[data-theme="dark"]{--bg:#1c1a18;--pn:#26231f;--ink:#efe9df;--mut:#9a9387;--ln:#3a352f;--cv:#14120f}
@@ -23,6 +28,7 @@ textarea{font:inherit;width:190px;height:30px;resize:vertical;background:var(--b
 #em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;color:var(--mut);text-align:center;font-size:16px}
 #hint{padding:5px 12px;color:var(--mut);font-size:12px;background:var(--pn);border-top:1px solid var(--ln)}
 #tt{position:fixed;left:50%;bottom:50px;transform:translateX(-50%);background:var(--ink);color:var(--pn);padding:7px 14px;border-radius:20px;opacity:0;transition:.25s;pointer-events:none}
+#ed{position:absolute;z-index:5;margin:0;padding:0;border:1px dashed var(--acc);background:transparent;resize:none;overflow:hidden;outline:none;white-space:pre;line-height:1.25;min-width:20px}
 .hide{display:none!important}
 </style></head><body>
 <div class="bar">
@@ -38,17 +44,17 @@ textarea{font:inherit;width:190px;height:30px;resize:vertical;background:var(--b
  <label id="pc" class="hide">颜色<input id="col" type="color" value="#ef4444"></label>
  <label id="ps" class="hide"><span id="psl">线宽</span><input id="sz" type="range" min="1" max="30" value="6"></label>
  <label id="pf" class="hide">填充<input id="fc" type="checkbox"><input id="fcol" type="color" value="#fde047"></label>
- <select id="fam" class="hide"></select><label id="pbd" class="hide"><input id="bd" type="checkbox" checked>粗体</label>
+ <select id="fam" class="hide"></select><label id="pbd" class="hide"><input id="bd" type="checkbox">粗体</label>
  <textarea id="txt" class="hide" placeholder="输入文字"></textarea>
  <div class="g" id="pb" class="hide"><button onclick="layer(1)">上移一层</button><button onclick="layer(-1)">下移一层</button><button id="rc" onclick="resetCrop()">重置裁剪</button><button onclick="del()">删除</button></div>
 </div>
-<div id="w"><canvas id="cv"></canvas><div id="em">拖入 / 粘贴 / 点击「添加图片」<br>然后选择横拼、竖拼、田字，或直接拖动自由摆放</div></div>
-<div id="hint">拖动图片自由摆放（靠近边缘自动吸附）· 四角缩放 · 四边中点裁剪 · 滚轮缩放画布 · 空白处拖动平移 · Delete 删除 · Ctrl/Cmd+Z 撤销</div>
+<div id="w"><canvas id="cv"></canvas><textarea id="ed" class="hide" spellcheck="false"></textarea><div id="em">拖入 / 粘贴 / 点击「添加图片」<br>然后选择横拼、竖拼、田字，或直接拖动自由摆放</div></div>
+<div id="hint">拖动图片自由摆放（靠近边缘自动吸附）· 四角缩放 · 四边中点裁剪 · 滚轮上下移动 · Shift+滚轮左右移动 · Cmd/Ctrl+滚轮缩放 · 空白处拖动平移 · 双击文字直接编辑 · Delete 删除 · Ctrl/Cmd+Z 撤销</div>
 <div id="tt"></div>
 <script>
 const $=s=>document.querySelector(s),cv=$('#cv'),ctx=cv.getContext('2d'),tc=document.createElement('canvas').getContext('2d');
-let items=[],sel=-1,tool='select',V={z:1,ox:0,oy:0},bg='#ffffff',gap=8,layout='',drag=null,col='#ef4444',lw=6,fs=48,fill='',fnt=0,hist=[];
-const FONTS=[['黑体',"'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif"],['宋体',"'Noto Serif SC','Songti SC',SimSun,serif"],['楷体',"'LXGW WenKai Screen','Kaiti SC',KaiTi,STKaiti,serif"],['Arial',"Arial,'Liberation Sans',Helvetica,sans-serif"]];
+let items=[],sel=-1,tool='select',V={z:1,ox:0,oy:0},bg='#ffffff',gap=8,layout='',drag=null,col='#ef4444',lw=6,fs=30,fill='',fnt=2,hist=[],editIt=null;
+const FONTS=[['黑体',"'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif"],['宋体',"'Noto Serif SC','Songti SC',SimSun,serif"],['楷体',"'KaiPunct','AR PL UKai CN','Kaiti SC',STKaiti,KaiTi,'LXGW WenKai Screen',serif"],['Arial',"Arial,'Liberation Sans',Helvetica,sans-serif"]];
 const pend=new Set();
 function ensureFont(it){const f=F(it),k=f+'|'+it.text;if(document.fonts.check(f,it.text)||pend.has(k))return;pend.add(k);document.fonts.load(f,it.text).catch(()=>{}).then(()=>{pend.delete(k);render()})}
 async function fontsReady(){await Promise.all(items.filter(i=>i.t=='text').map(i=>document.fonts.load(F(i),i.text).catch(()=>{})))}
@@ -63,7 +69,7 @@ function bounds(){if(!items.length)return null;let a=1e9,b=1e9,c=-1e9,d=-1e9;ite
 function drawItem(c,it){
  if(it.t=='img')c.drawImage(it.im,it.cx,it.cy,it.cw,it.ch,it.x,it.y,it.w,it.h);
  else if(it.t=='shape')drawShape(c,it);
- else{ensureFont(it);c.fillStyle=it.color;c.font=F(it);c.textBaseline='top';it.text.split('\n').forEach((l,i)=>c.fillText(l,it.x,it.y+i*it.size*1.25))}}
+ else{ensureFont(it);if(it.hid)return;c.fillStyle=it.color;c.font=F(it);c.textBaseline='top';it.text.split('\n').forEach((l,i)=>c.fillText(l,it.x,it.y+i*it.size*1.25))}}
 function ends(it){const{x,y,w,h}=it;return[it.fx?x+w:x,it.fy?y+h:y,it.fx?x:x+w,it.fy?y:y+h]}
 function drawShape(c,it){const{x,y,w,h,k}=it;c.lineWidth=it.lw;c.strokeStyle=it.color;c.lineJoin=c.lineCap='round';c.beginPath();
  if(k=='rect')c.rect(x,y,w,h);
@@ -75,7 +81,8 @@ function drawShape(c,it){const{x,y,w,h,k}=it;c.lineWidth=it.lw;c.strokeStyle=it.
  if(it.fill&&k!='line'&&k!='arrow'){c.fillStyle=it.fill;c.fill()}
  if(it.lw>0)c.stroke()}
 function H(it){const{x,y,w,h}=it,a=[['nw',x,y],['ne',x+w,y],['sw',x,y+h],['se',x+w,y+h]];if(it.t=='img')a.push(['n',x+w/2,y],['s',x+w/2,y+h],['w',x,y+h/2],['e',x+w,y+h/2]);return a}
-function render(){
+function render(){render0();syncEd()}
+function render0(){
  const d=devicePixelRatio||1;ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--cv').trim();ctx.fillRect(0,0,cv.width,cv.height);
  ctx.setTransform(d*V.z,0,0,d*V.z,d*V.ox,d*V.oy);ctx.imageSmoothingQuality='high';
  const B=bounds();$('#em').classList.toggle('hide',!!B);
@@ -87,10 +94,17 @@ function pt(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left-V.o
 function hitH(p){const r=10/V.z,it=box(items[sel]);return(H(it).find(a=>Math.abs(p.x-a[1])<r&&Math.abs(p.y-a[2])<r)||[])[0]}
 function hit(p){for(let i=items.length-1;i>=0;i--){const it=box(items[i]),e=it.t=='shape'?it.lw/2+6/V.z:0;if(p.x<it.x-e||p.y<it.y-e||p.x>it.x+it.w+e||p.y>it.y+it.h+e)continue;if(it.t=='shape'){const m=it.lw+8/V.z;if(it.k=='line'||it.k=='arrow'){const[a,b,c,d]=ends(it),dx=c-a,dy=d-b,t=Math.max(0,Math.min(1,((p.x-a)*dx+(p.y-b)*dy)/(dx*dx+dy*dy||1)));if(Math.hypot(p.x-a-t*dx,p.y-b-t*dy)>m)continue}else if(!it.fill&&p.x>it.x+m&&p.y>it.y+m&&p.x<it.x+it.w-m&&p.y<it.y+it.h-m)continue}return i}return -1}
 function snap(it,x,y){const t=7/V.z;let bx=t,by=t,rx=x,ry=y;items.forEach(o=>{if(o==it)return;[o.x,o.x+o.w].forEach(v=>[[x,0],[x+it.w,-it.w]].forEach(([c,f])=>{const q=Math.abs(c-v);if(q<bx){bx=q;rx=v+f}}));[o.y,o.y+o.h].forEach(v=>[[y,0],[y+it.h,-it.h]].forEach(([c,f])=>{const q=Math.abs(c-v);if(q<by){by=q;ry=v+f}}))});return[rx,ry]}
+const ed=$('#ed');
+function openEd(){const it=items[sel];if(!it||it.t!='text')return;if(editIt)closeEd();editIt=it;it.hid=true;ed.value=it.text;ed.classList.remove('hide');syncEd();render();ed.focus();ed.select()}
+function syncEd(){const it=editIt;if(!it)return;box(it);const s=ed.style;s.left=(V.ox+it.x*V.z-1)+'px';s.top=(V.oy+it.y*V.z-1)+'px';s.font=F(it).replace(/^(bold )?[\d.]+px/,(m,b)=>(b||'')+(it.size*V.z)+'px');s.lineHeight='1.25';s.color=it.color;s.width=(it.w*V.z+it.size*V.z*.6+4)+'px';s.height=(it.h*V.z+2)+'px'}
+function closeEd(){const it=editIt;if(!it)return;editIt=null;it.hid=false;ed.classList.add('hide');if(!it.text.trim()){const i=items.indexOf(it);if(i>=0)items.splice(i,1);sel=-1}ui();render()}
+ed.oninput=()=>{if(editIt){editIt.text=ed.value||' ';syncEd();ui()}};
+ed.onblur=closeEd;ed.onkeydown=e=>{if(e.key=='Escape')ed.blur()};
+cv.ondblclick=e=>{const i=hit(pt(e));if(i>=0&&items[i].t=='text'){sel=i;ui();openEd()}};
 function setTool(t){tool=t;['select','shape','text'].forEach(k=>$('#t-'+k).classList.toggle('on',k==t));cv.style.cursor=t=='select'?'default':'crosshair'}
 cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId);const p=pt(e);
  if(tool=='shape'){save();const k=$('#shp').value,ln=k=='line'||k=='arrow';items.push({t:'shape',k,x:p.x,y:p.y,w:0,h:0,fx:0,fy:0,color:col,lw:ln?Math.max(lw,2):lw,fill:ln?'':fill});sel=items.length-1;drag={m:'draw',p0:p,o:{}};return}
- if(tool=='text'){save();items.push({t:'text',x:p.x,y:p.y,text:'在这里输入文字',size:fs,color:col,fi:fnt,b:$('#bd').checked});sel=items.length-1;setTool('select');ui();render();$('#txt').focus();$('#txt').select();return}
+ if(tool=='text'){save();items.push({t:'text',x:p.x,y:p.y,text:'在这里输入文字',size:fs,color:col,fi:fnt,b:$('#bd').checked});sel=items.length-1;setTool('select');ui();render();setTimeout(openEd,60);return}
  if(sel>=0&&items[sel]){const k=hitH(p);if(k){save();drag={m:k.length==2?'rs':'crop',k,p0:p,o:{...items[sel]}};return}}
  const i=hit(p);
  if(i>=0){sel=i;save();drag={m:'move',p0:p,o:{...items[i]}}}else{sel=-1;drag={m:'pan',s:{x:e.clientX,y:e.clientY},o:{...V}}}
@@ -109,7 +123,11 @@ cv.onpointermove=e=>{if(!drag)return;const p=pt(e),it=items[sel],o=drag.o,k=drag
   if(k=='s'){dy=cl(dy,10-o.h,(Hh-o.cy-o.ch)/sy);it.h=o.h+dy;it.ch=o.ch+dy*sy}}
  render()};
 cv.onpointerup=()=>{if(drag&&drag.m=='draw'){const it=items[sel];if(it.k=='line'||it.k=='arrow'?it.w+it.h<6:it.w<4||it.h<4){items.pop();hist.pop();sel=-1}}drag=null;ui();render()};
-cv.addEventListener('wheel',e=>{e.preventDefault();const p=pt(e),r=cv.getBoundingClientRect();V.z=Math.min(8,Math.max(.03,V.z*(e.deltaY<0?1.1:1/1.1)));V.ox=e.clientX-r.left-p.x*V.z;V.oy=e.clientY-r.top-p.y*V.z;render()},{passive:false});
+cv.addEventListener('wheel',e=>{e.preventDefault();
+ if(e.metaKey||e.ctrlKey){const p=pt(e),r=cv.getBoundingClientRect(),d=Math.max(-60,Math.min(60,e.deltaY));V.z=Math.min(8,Math.max(.03,V.z*Math.exp(-d*.006)));V.ox=e.clientX-r.left-p.x*V.z;V.oy=e.clientY-r.top-p.y*V.z}
+ else if(e.shiftKey){V.ox-=(e.deltaX||e.deltaY)}
+ else{V.ox-=e.deltaX;V.oy-=e.deltaY}
+ render()},{passive:false});
 function arrange(m){layout=m;const L=items.filter(i=>i.t=='img');if(!L.length)return toast('请先添加图片');save();const g=+gap;
  if(m=='h'){let x=0;L.forEach(i=>{i.h=600;i.w=i.cw*600/i.ch;i.x=x;i.y=0;x+=i.w+g})}
  if(m=='v'){let y=0;L.forEach(i=>{i.w=800;i.h=i.ch*800/i.cw;i.x=0;i.y=y;y+=i.h+g})}
@@ -125,14 +143,14 @@ $('#w').ondragover=e=>e.preventDefault();$('#w').ondrop=e=>{e.preventDefault();a
 $('#gp').oninput=e=>{gap=+e.target.value;if(layout)arrange(layout)};
 $('#bgc').oninput=e=>{bg=e.target.value;render()};
 function ui(){const it=items[sel],T=it?it.t:'';$('#pl').textContent=it?{img:'图片',shape:'图形',text:'文字'}[T]:'未选中对象';
- $('#pc').classList.toggle('hide',!it||T=='img');$('#ps').classList.toggle('hide',!it||T=='img');$('#txt').classList.toggle('hide',T!='text');$('#pf').classList.toggle('hide',T!='shape'||it.k=='line'||it.k=='arrow');$('#fam').classList.toggle('hide',T!='text');$('#pbd').classList.toggle('hide',T!='text');$('#pb').classList.toggle('hide',!it);$('#rc').classList.toggle('hide',T!='img');
+ $('#pc').classList.toggle('hide',!it||T=='img');$('#ps').classList.toggle('hide',!it||T=='img');$('#txt').classList.add('hide');$('#pf').classList.toggle('hide',T!='shape'||it.k=='line'||it.k=='arrow');$('#fam').classList.toggle('hide',T!='text');$('#pbd').classList.toggle('hide',T!='text');$('#pb').classList.toggle('hide',!it);$('#rc').classList.toggle('hide',T!='img');
  if(it&&T!='img'){$('#col').value=it.color;$('#psl').textContent=T=='shape'?'线宽':'字号';const s=$('#sz');s.max=T=='shape'?40:240;s.min=T=='shape'&&it.k!='line'&&it.k!='arrow'?0:1;s.value=T=='shape'?it.lw:it.size;if(T=='shape'){$('#fc').checked=!!it.fill;if(it.fill)$('#fcol').value=it.fill}if(T=='text'){$('#txt').value=it.text;$('#fam').value=it.fi||0;$('#bd').checked=!!it.b}}}
 $('#col').oninput=e=>{col=e.target.value;if(items[sel])items[sel].color=col;render()};
 $('#sz').oninput=e=>{const v=+e.target.value,it=items[sel];if(!it)return;if(it.t=='shape'){it.lw=lw=v}else{it.size=fs=v}render()};
 $('#txt').oninput=e=>{if(items[sel]){items[sel].text=e.target.value||' ';render()}};
 function setFill(){const it=items[sel];if(it&&it.t=='shape'){it.fill=$('#fc').checked?$('#fcol').value:'';fill=it.fill;render()}}
 $('#fc').onchange=setFill;$('#fcol').oninput=()=>{$('#fc').checked=true;setFill()};
-$('#fam').innerHTML=FONTS.map((f,i)=>`<option value="${i}">${f[0]}</option>`).join('');
+$('#fam').innerHTML=FONTS.map((f,i)=>`<option value="${i}">${f[0]}</option>`).join('');$('#fam').value=2;
 $('#fam').onchange=e=>{const it=items[sel];fnt=+e.target.value;if(it&&it.t=='text'){it.fi=fnt;render()}};
 $('#bd').onchange=e=>{const it=items[sel];if(it&&it.t=='text'){it.b=e.target.checked;render()}};
 function del(){if(sel<0)return;save();items.splice(sel,1);sel=-1;ui();render()}
