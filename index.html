@@ -1,4 +1,9 @@
 <!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>拼图工坊 · PicStitch</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.7.0/lxgwwenkaiscreen.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5/700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-sc@5/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-sc@5/700.css">
 <style>
 :root{--bg:#f4f1ec;--pn:#fffdf9;--ink:#2a2724;--mut:#7b756d;--ln:#e2dcd2;--acc:#d9573b;--cv:#e6e1d6;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1a18;--pn:#26231f;--ink:#efe9df;--mut:#9a9387;--ln:#3a352f;--cv:#14120f}}
@@ -43,7 +48,10 @@ textarea{font:inherit;width:190px;height:30px;resize:vertical;background:var(--b
 <script>
 const $=s=>document.querySelector(s),cv=$('#cv'),ctx=cv.getContext('2d'),tc=document.createElement('canvas').getContext('2d');
 let items=[],sel=-1,tool='select',V={z:1,ox:0,oy:0},bg='#ffffff',gap=8,layout='',drag=null,col='#ef4444',lw=6,fs=48,fill='',fnt=0,hist=[];
-const FONTS=[['黑体',"'PingFang SC','Microsoft YaHei','Heiti SC',sans-serif"],['宋体',"SimSun,'Songti SC',STSong,serif"],['楷体',"KaiTi,'楷体','Kaiti SC',STKaiti,BiauKai,serif"],['仿宋',"FangSong,'FangSong SC',STFangsong,serif"],['行楷',"'Xingkai SC',STXingkai,'Kaiti SC',KaiTi,cursive"],['Georgia',"Georgia,serif"],['等宽',"'Courier New',monospace"]];
+const FONTS=[['黑体',"'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif"],['宋体',"'Noto Serif SC','Songti SC',SimSun,serif"],['楷体',"'LXGW WenKai Screen','Kaiti SC',KaiTi,STKaiti,serif"],['Arial',"Arial,'Liberation Sans',Helvetica,sans-serif"]];
+const pend=new Set();
+function ensureFont(it){const f=F(it),k=f+'|'+it.text;if(document.fonts.check(f,it.text)||pend.has(k))return;pend.add(k);document.fonts.load(f,it.text).catch(()=>{}).then(()=>{pend.delete(k);render()})}
+async function fontsReady(){await Promise.all(items.filter(i=>i.t=='text').map(i=>document.fonts.load(F(i),i.text).catch(()=>{})))}
 function save(){hist.push(items.map(i=>({...i})));if(hist.length>60)hist.shift()}
 function undo(){const h=hist.pop();if(!h)return toast('没有可撤销的操作');items=h;sel=-1;ui();render()}
 function clearAll(){if(!items.length)return;save();items=[];sel=-1;layout='';ui();render();toast('已清空，Ctrl+Z 可撤销')}
@@ -55,7 +63,7 @@ function bounds(){if(!items.length)return null;let a=1e9,b=1e9,c=-1e9,d=-1e9;ite
 function drawItem(c,it){
  if(it.t=='img')c.drawImage(it.im,it.cx,it.cy,it.cw,it.ch,it.x,it.y,it.w,it.h);
  else if(it.t=='shape')drawShape(c,it);
- else{c.fillStyle=it.color;c.font=F(it);c.textBaseline='top';it.text.split('\n').forEach((l,i)=>c.fillText(l,it.x,it.y+i*it.size*1.25))}}
+ else{ensureFont(it);c.fillStyle=it.color;c.font=F(it);c.textBaseline='top';it.text.split('\n').forEach((l,i)=>c.fillText(l,it.x,it.y+i*it.size*1.25))}}
 function ends(it){const{x,y,w,h}=it;return[it.fx?x+w:x,it.fy?y+h:y,it.fx?x:x+w,it.fy?y:y+h]}
 function drawShape(c,it){const{x,y,w,h,k}=it;c.lineWidth=it.lw;c.strokeStyle=it.color;c.lineJoin=c.lineCap='round';c.beginPath();
  if(k=='rect')c.rect(x,y,w,h);
@@ -134,7 +142,7 @@ document.onkeydown=e=>{const a=document.activeElement.tagName;if(a=='TEXTAREA')r
 function out(){const B=bounds();if(!B){toast('请先添加图片');return null}let m=1;items.forEach(i=>{if(i.t=='img')m=Math.max(m,i.cw/i.w)});
  let s=$('#qs').value=='auto'?m:+$('#qs').value;s=Math.min(s,8192/Math.max(B.w,B.h));
  const c=document.createElement('canvas');c.width=Math.round(B.w*s);c.height=Math.round(B.h*s);const x=c.getContext('2d');x.imageSmoothingQuality='high';x.fillStyle=bg;x.fillRect(0,0,c.width,c.height);x.scale(s,s);x.translate(-B.x,-B.y);items.forEach(i=>drawItem(x,i));return c}
-async function copyImg(){const c=out();if(!c)return;try{const b=await new Promise(r=>c.toBlob(r,'image/png'));await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);toast(`已复制（${c.width}×${c.height}）`)}catch(e){toast('当前环境不支持直接复制，请使用下载')}}
-function download(){const c=out();if(!c)return;const t=$('#fm').value;c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='拼图.'+(t=='image/png'?'png':'jpg');a.click();toast(`已导出 ${c.width}×${c.height}`)},t,.95)}
+async function copyImg(){await fontsReady();const c=out();if(!c)return;try{const b=await new Promise(r=>c.toBlob(r,'image/png'));await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);toast(`已复制（${c.width}×${c.height}）`)}catch(e){toast('当前环境不支持直接复制，请使用下载')}}
+async function download(){await fontsReady();const c=out();if(!c)return;const t=$('#fm').value;c.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='拼图.'+(t=='image/png'?'png':'jpg');a.click();toast(`已导出 ${c.width}×${c.height}`)},t,.95)}
 addEventListener('resize',size);size();
 </script></body></html>
